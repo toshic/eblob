@@ -373,7 +373,7 @@ static int eblob_writev_raw(struct eblob_key *key, struct eblob_write_control *w
 			goto err_exit;
 		}
 
-		err = __eblob_write_ll(wc->bctl->data_ctl.fd, tmp->base, tmp->size, offset);
+		err = __eblob_write_ll(wc->bctl->back->cfg.log, wc->bctl->data_ctl.fd, tmp->base, tmp->size, offset);
 		if (err != 0)
 			goto err_exit;
 	}
@@ -543,7 +543,7 @@ static int eblob_check_disk_one(struct eblob_iterate_local *loc)
 					"blob: %s: key removed(%s) in blob(%d), but not in index(%d), fixing\n",
 					eblob_dump_id(dc->key.id), eblob_dump_dctl_flags(dc_data.flags), bc->data_ctl.fd, bc->index_ctl.fd);
 			dc->flags |= BLOB_DISK_CTL_REMOVE;
-			err = __eblob_write_ll(bc->index_ctl.fd, dc,
+			err = __eblob_write_ll(ctl->log, bc->index_ctl.fd, dc,
 					sizeof(struct eblob_disk_control), loc->index_offset);
 			if (err)
 				goto err_out_exit;
@@ -1030,11 +1030,11 @@ err_out_exit:
  * @fd:		opened for write file descriptor of index
  * @offset:	position of entry's disk control in index
  */
-int eblob_mark_index_removed(int fd, uint64_t offset)
+int eblob_mark_index_removed(struct eblob_log *log, int fd, uint64_t offset)
 {
 	uint64_t flags = eblob_bswap64(BLOB_DISK_CTL_REMOVE);
 
-	return __eblob_write_ll(fd, &flags, sizeof(flags), offset + offsetof(struct eblob_disk_control, flags));
+	return __eblob_write_ll(log, fd, &flags, sizeof(flags), offset + offsetof(struct eblob_disk_control, flags));
 }
 
 /**
@@ -1100,7 +1100,7 @@ static int eblob_mark_entry_removed(struct eblob_backend *b,
 	/* size of the place occupied by the record in the index and the blob */
 	record_size = old_dc.disk_size + sizeof(struct eblob_disk_control);
 
-	err = eblob_mark_index_removed(old->bctl->index_ctl.fd, old->index_offset);
+	err = eblob_mark_index_removed(b->cfg.log, old->bctl->index_ctl.fd, old->index_offset);
 	if (err != 0) {
 		EBLOB_WARNX(b->cfg.log, EBLOB_LOG_ERROR,
 				"%s: eblob_mark_index_removed: FAILED: index, fd: %d, err: %d",
@@ -1108,7 +1108,7 @@ static int eblob_mark_entry_removed(struct eblob_backend *b,
 		goto err;
 	}
 
-	err = eblob_mark_index_removed(old->bctl->data_ctl.fd, old->data_offset);
+	err = eblob_mark_index_removed(b->cfg.log, old->bctl->data_ctl.fd, old->data_offset);
 	if (err != 0) {
 		EBLOB_WARNX(b->cfg.log, EBLOB_LOG_ERROR,
 				"%s: eblob_mark_index_removed: FAILED: data, fd: %d, err: %d",
@@ -1209,13 +1209,13 @@ static int eblob_commit_disk(struct eblob_backend *b, struct eblob_key *key,
 
 	eblob_wc_to_dc(key, wc, &dc);
 
-	err = __eblob_write_ll(wc->index_fd, &dc, sizeof(dc), wc->ctl_index_offset);
+	err = __eblob_write_ll(b->cfg.log, wc->index_fd, &dc, sizeof(dc), wc->ctl_index_offset);
 	if (err) {
 		eblob_dump_wc(b, key, wc, "eblob_commit_disk: ERROR-write-index", err);
 		goto err_out_exit;
 	}
 
-	err = __eblob_write_ll(wc->data_fd, &dc, sizeof(dc), wc->ctl_data_offset);
+	err = __eblob_write_ll(b->cfg.log, wc->data_fd, &dc, sizeof(dc), wc->ctl_data_offset);
 	if (err) {
 		eblob_dump_wc(b, key, wc, "eblob_commit_disk: ERROR-write-data", err);
 		goto err_out_exit;
@@ -1233,18 +1233,24 @@ err_out_exit:
 /**
  * __eblob_write_ll() - interruption-safe wrapper for pwrite(2)
  */
-int __eblob_write_ll(int fd, const void *data, size_t size, off_t offset)
+int __eblob_write_ll(struct eblob_log *log, int fd, const void *data, size_t size, off_t offset)
 {
 	int err = 0;
 	ssize_t bytes;
 
+	eblob_log(log, EBLOB_LOG_INFO,
+	          "blob: __eblob_write_ll: fd: %d, data: %p, size: %zu, offset: %lld",
+	          fd, data, size, (long long int)offset);
+
 	while (size) {
 again:
 		bytes = pwrite(fd, data, size, offset);
-		if (bytes == -1) {
+		if (bytes < 0) {
 			if (errno == -EINTR)
 				goto again;
 			err = -errno;
+			if (err >= 0)
+				err = -EOWNERDEAD;
 			goto err_out_exit;
 		}
 		data += bytes;
@@ -1252,6 +1258,9 @@ again:
 		offset += bytes;
 	}
 err_out_exit:
+	eblob_log(log, EBLOB_LOG_INFO,
+	          "blob: __eblob_write_ll: finished: fd: %d, data: %p, size: %zu, offset: %lld, err: %d",
+	          fd, data, size, (long long int)offset, err);
 	return err;
 }
 

@@ -509,7 +509,7 @@ int eblob_generate_sorted_index(struct eblob_backend *b, struct eblob_base_ctl *
 int eblob_index_blocks_destroy(struct eblob_base_ctl *bctl);
 
 int eblob_index_blocks_fill(struct eblob_base_ctl *bctl);
-int __eblob_write_ll(int fd, const void *data, size_t size, off_t offset);
+int __eblob_write_ll(struct eblob_log *log, int fd, const void *data, size_t size, off_t offset);
 int __eblob_read_ll(int fd, void *data, size_t size, off_t offset);
 
 struct eblob_disk_search_stat {
@@ -542,7 +542,7 @@ int eblob_splice_data(int fd_in, uint64_t off_in, int fd_out, uint64_t off_out, 
 int eblob_preallocate(int fd, off_t offset, off_t size);
 int eblob_pagecache_hint(int fd, uint64_t flag);
 
-int eblob_mark_index_removed(int fd, uint64_t offset);
+int eblob_mark_index_removed(struct eblob_log *log, int fd, uint64_t offset);
 void eblob_base_wait(struct eblob_base_ctl *bctl);
 void eblob_base_wait_locked(struct eblob_base_ctl *bctl);
 

@@ -578,7 +578,7 @@ static int indexsort_binlog_apply(struct eblob_base_ctl *bctl, void *sorted_inde
 
 			EBLOB_WARNX(bctl->back->cfg.log, EBLOB_LOG_DEBUG, "%s: indexsort: removing: fd: %d, offset: %" PRIu64,
 			            eblob_dump_id(it->key.id), bctl->data_ctl.fd, dc->position);
-			err = eblob_mark_index_removed(bctl->data_ctl.fd, dc->position);
+			err = eblob_mark_index_removed(bctl->back->cfg.log, bctl->data_ctl.fd, dc->position);
 			if (err != 0) {
 				EBLOB_WARNX(bctl->back->cfg.log, EBLOB_LOG_ERROR,
 						"%s: indexsort: eblob_mark_index_removed: FAILED: data, fd: %d, err: %d",
@@ -750,7 +750,7 @@ int eblob_generate_sorted_index(struct eblob_backend *b, struct eblob_base_ctl *
 		goto err_unlock_hash;
 	}
 
-	err = __eblob_write_ll(fd, sorted_index, index_size, 0);
+	err = __eblob_write_ll(b->cfg.log, fd, sorted_index, index_size, 0);
 	if (err) {
 		EBLOB_WARNC(b->cfg.log, EBLOB_LOG_ERROR, -err, "defrag: indexsort: write after binlog apply: index: %d, size: %llu: %s",
 			    bctl->index, (unsigned long long)index_size, file);

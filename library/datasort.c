@@ -506,7 +506,7 @@ static int datasort_split_iterator(struct eblob_disk_control *dc,
 	c->index[c->count] = *dc;
 
 	/* Write header */
-	err = __eblob_write_ll(c->fd, dc, hdr_size, c->offset);
+	err = __eblob_write_ll(dcfg->log, c->fd, dc, hdr_size, c->offset);
 	if (err) {
 		EBLOB_WARNC(dcfg->log, EBLOB_LOG_ERROR, -err, "defrag: __eblob_write_ll-hdr");
 		goto err;
@@ -625,7 +625,7 @@ static int datasort_copy_record(struct datasort_cfg *dcfg,
 	dc->position = offset;
 
 	/* Write header */
-	err = __eblob_write_ll(to_chunk->fd, dc, hdr_size, offset);
+	err = __eblob_write_ll(dcfg->log, to_chunk->fd, dc, hdr_size, offset);
 	if (err) {
 		EBLOB_WARNC(dcfg->log, EBLOB_LOG_ERROR, -err, "__eblob_write_ll: %s, fd: %d, offset: %" PRIu64,
 				to_chunk->path, to_chunk->fd, offset);
@@ -966,7 +966,7 @@ static int datasort_binlog_apply(struct datasort_cfg *dcfg)
 			EBLOB_WARNX(dcfg->log, EBLOB_LOG_DEBUG,
 					"%s: defrag: removing: fd: %d, offset: %" PRIu64,
 					eblob_dump_id(it->key.id), dcfg->result->fd, dc.position);
-			err = eblob_mark_index_removed(dcfg->result->fd, dc.position);
+			err = eblob_mark_index_removed(dcfg->log, dcfg->result->fd, dc.position);
 			if (err != 0) {
 				EBLOB_WARNX(dcfg->log, EBLOB_LOG_ERROR,
 						"%s: defrag: eblob_mark_index_removed: FAILED: fd: %d, offset: %" PRIu64,
@@ -1054,7 +1054,7 @@ static int datasort_swap_memory(struct datasort_cfg *dcfg)
 
 	/* write index */
 	if (index.size > 0) {
-		err = __eblob_write_ll(index.fd, dcfg->result->index, index.size, 0);
+		err = __eblob_write_ll(dcfg->log, index.fd, dcfg->result->index, index.size, 0);
 		if (err) {
 			EBLOB_WARNC(dcfg->log, EBLOB_LOG_ERROR, -err,
 					"defrag: eblob_write: fd: %d, size: %" PRIu64, index.fd, index.size);

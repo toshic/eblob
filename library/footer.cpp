@@ -332,7 +332,7 @@ int eblob_commit_footer(struct eblob_backend *b, struct eblob_key *key, struct e
 	const uint64_t final_checksum = MurmurHash64A(checksums.data(), checksums_size, 0);
 
 	/* writes chunked MurmurHash64A to footer */
-	err = __eblob_write_ll(wc->data_fd, checksums.data(), checksums_size, checksums_offset);
+	err = __eblob_write_ll(b->cfg.log, wc->data_fd, checksums.data(), checksums_size, checksums_offset);
 	if (err) {
 		eblob_log(b->cfg.log, EBLOB_LOG_ERROR, "blob i%d: %s: %s: failed to write checksums: "
 		          "fd: %d, size: %" PRIu64 ", offset: %" PRIu64 ": %d\n",
@@ -344,7 +344,7 @@ int eblob_commit_footer(struct eblob_backend *b, struct eblob_key *key, struct e
 	checksums_offset += checksums_size;
 
 	/* writes final MurmurHash64A to footer */
-	err = __eblob_write_ll(wc->data_fd, &final_checksum, sizeof(final_checksum), checksums_offset);
+	err = __eblob_write_ll(b->cfg.log, wc->data_fd, &final_checksum, sizeof(final_checksum), checksums_offset);
 	if (err) {
 		eblob_log(b->cfg.log, EBLOB_LOG_ERROR, "blob i%d: %s: %s: failed to write final checksums: "
 		          "fd: %d, size: %zu, offset: %" PRIu64 ": %d\n",
