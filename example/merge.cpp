@@ -75,11 +75,15 @@ struct em_blob {
 			data.seekg(0, std::ios::beg);
 
 			// Open index
-			std::string index_path(path);
-			index_path += ".index";
+			auto index_path = std::string(path) + ".index.sorted";
 			index.open(index_path.c_str(), std::ios_base::in | std::ios_base::binary);
-			if (!index)
-				throw std::runtime_error("index open failed");
+			if (!index) {
+				index_path = std::string(path) + ".index";
+				index.open(index_path.c_str(), std::ios_base::in | std::ios_base::binary);
+				if (!index) {
+					throw std::runtime_error("index open failed");
+				}
+			}
 		} catch (...) {
 			data.close();
 			index.close();
