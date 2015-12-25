@@ -1,3 +1,9 @@
+eblob (0.23.11~extralogs-pagecache) unstable; urgency=low
+
+  * Try to handle potential Linux pagecache bug
+
+ -- Kirill Smorodinnikov <shaitkir@gmail.com>  Fri, 25 Dec 2015 12:14:21 +0400
+
 eblob (0.23.11~extralogs) unstable; urgency=low
 
   * extra logs for __eblob_write_ll()
