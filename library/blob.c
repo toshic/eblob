@@ -1239,7 +1239,7 @@ static int eblob_commit_disk(struct eblob_backend *b, struct eblob_key *key,
 	uint64_t tmp;
 	if (wc->ctl_data_offset > 8) {
 		err = __eblob_read_ll(wc->data_fd, &tmp, sizeof(tmp), wc->ctl_data_offset - 8);
-		if (err) {
+		if (err && err != -ESPIPE) {
 			eblob_dump_wc(b, key, wc, "eblob_commit_disk: ERROR sanity check failed", err);
 			goto err_out_exit;
 		}
