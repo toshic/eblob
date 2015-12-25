@@ -1,3 +1,9 @@
+eblob (0.23.11~extralogs-pagecache2) unstable; urgency=medium
+
+  * Do not fail on -ESPIPE error during sanity check
+
+ -- Anton Kortunov <toshik@yandex-team.ru>  Fri, 25 Dec 2015 16:39:26 +0300
+
 eblob (0.23.11~extralogs-pagecache) unstable; urgency=low
 
   * Try to handle potential Linux pagecache bug
